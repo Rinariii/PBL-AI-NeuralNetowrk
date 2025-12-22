@@ -6,8 +6,6 @@ import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error, r2_score
 
-"""##Membuat fungsi neural network"""
-
 class SimpleNeuralNetwork:
     def __init__(self, input_size, hidden_size, output_size):
         # He initialization
