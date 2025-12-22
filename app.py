@@ -95,6 +95,11 @@ def main():
         st.session_state.scaler_X = scaler_X
         st.session_state.scaler_y = scaler_y
 
+    st.sidebar.header("Random Seed")
+    SEED = st.sidebar.number_input("Random Seed", value=42, step=1)
+    np.random.seed(SEED)
+
+
     # Prediction
     st.subheader("Prediksi Data Baru")
 
