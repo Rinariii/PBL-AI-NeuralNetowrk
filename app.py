@@ -20,9 +20,6 @@ def main():
     st.title("Neural Network From Scratch – Streamlit")
     st.caption("Regresi Soil Moisture menggunakan NN ReLU dari nol")
 
-    # ======================
-    # Load Data
-    # ======================
     df = load_data("synthetic_soil_moisture_5000.csv")
 
     st.subheader("Preview Dataset")
@@ -34,18 +31,14 @@ def main():
     X = df[feature_cols].values
     y = df[[target]].values
 
-    # ======================
     # Sidebar
-    # ======================
     st.sidebar.header("Training Config")
     hidden_size = st.sidebar.slider("Hidden Layer Size", 1, 64, 8)
     epochs = st.sidebar.slider("Epochs", 500, 10000, 3000, step=500)
     lr = st.sidebar.number_input("Learning Rate", value=0.0001, format="%.6f")
     test_size = st.sidebar.slider("Test Size", 0.1, 0.4, 0.2)
 
-    # ======================
     # Train/Test Split
-    # ======================
     n = len(X)
     idx = np.random.permutation(n)
     split = int(n * (1 - test_size))
@@ -54,9 +47,7 @@ def main():
     X_train, X_test = X[train_idx], X[test_idx]
     y_train, y_test = y[train_idx], y[test_idx]
 
-    # ======================
-    # Scaling (SAMA dengan model asli)
-    # ======================
+    # Scaling
     scaler_X = StandardScaler()
     scaler_y = StandardScaler()
 
@@ -66,9 +57,6 @@ def main():
     y_train = scaler_y.fit_transform(y_train)
     y_test = scaler_y.transform(y_test)
 
-    # ======================
-    # Train Button
-    # ======================
     if st.button("Latih Model"):
         with st.spinner("Training sedang berjalan..."):
             model = SimpleNeuralNetwork(
@@ -81,9 +69,7 @@ def main():
 
         st.success("Training selesai")
 
-        # ======================
         # Evaluation
-        # ======================
         y_pred_test = model.forward(X_test)
 
         mse = mean_squared_error(y_test, y_pred_test)
@@ -95,9 +81,7 @@ def main():
         c2.metric("MAE", f"{mae:.5f}")
         c3.metric("R²", f"{r2:.5f}")
 
-        # ======================
         # Loss Curve
-        # ======================
         st.subheader("Training Curve")
         fig, ax = plt.subplots(figsize=(6, 4))
         ax.plot(model.loss_history, label="MSE")
@@ -107,16 +91,11 @@ def main():
         ax.legend()
         st.pyplot(fig)
 
-        # ======================
-        # Save Model to Session
-        # ======================
         st.session_state.model = model
         st.session_state.scaler_X = scaler_X
         st.session_state.scaler_y = scaler_y
 
-    # ======================
     # Prediction
-    # ======================
     st.subheader("Prediksi Data Baru")
 
     if "model" in st.session_state:
