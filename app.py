@@ -8,7 +8,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 from NN_relu import SimpleNeuralNetwork
 
-st.set_page_config(page_title="Neural Network From Scratch", layout="wide")
+st.set_page_config(page_title="Neural Network for Soil Mosture", layout="wide")
 
 
 @st.cache_data
@@ -17,8 +17,8 @@ def load_data(path):
 
 
 def main():
-    st.title("Neural Network From Scratch – Streamlit")
-    st.caption("Regresi Soil Moisture menggunakan NN ReLU dari nol")
+    st.title("Neural Network for Soil Mosture")
+    st.caption("Regresi Soil Moisture menggunakan NN ReLU")
 
     df = load_data("synthetic_soil_moisture_5000.csv")
 
