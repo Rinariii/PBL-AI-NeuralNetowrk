@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import streamlit as st
-import matplotlib.pyplot as plt
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
@@ -20,6 +19,10 @@ def main():
     st.title("Neural Network for Soil Mosture")
     st.caption("Regresi Soil Moisture menggunakan NN ReLU")
 
+    st.sidebar.header("Random Seed")
+    SEED = st.sidebar.number_input("Random Seed", value=42, step=1)
+    np.random.seed(SEED)
+
     df = load_data("synthetic_soil_moisture_5000.csv")
 
     st.subheader("Preview Dataset")
@@ -31,14 +34,12 @@ def main():
     X = df[feature_cols].values
     y = df[[target]].values
 
-    # Sidebar
     st.sidebar.header("Training Config")
     hidden_size = st.sidebar.slider("Hidden Layer Size", 1, 64, 8)
     epochs = st.sidebar.slider("Epochs", 500, 10000, 3000, step=500)
     lr = st.sidebar.number_input("Learning Rate", value=0.0001, format="%.6f")
     test_size = st.sidebar.slider("Test Size", 0.1, 0.4, 0.2)
 
-    # Train/Test Split
     n = len(X)
     idx = np.random.permutation(n)
     split = int(n * (1 - test_size))
@@ -47,7 +48,6 @@ def main():
     X_train, X_test = X[train_idx], X[test_idx]
     y_train, y_test = y[train_idx], y[test_idx]
 
-    # Scaling
     scaler_X = StandardScaler()
     scaler_y = StandardScaler()
 
@@ -64,12 +64,12 @@ def main():
                 hidden_size=hidden_size,
                 output_size=1
             )
-
             model.train(X_train, y_train, epochs=epochs, lr=lr)
 
-        st.success("Training selesai")
+        st.session_state.model = model
+        st.session_state.scaler_X = scaler_X
+        st.session_state.scaler_y = scaler_y
 
-        # Evaluation
         y_pred_test = model.forward(X_test)
 
         mse = mean_squared_error(y_test, y_pred_test)
@@ -81,26 +81,36 @@ def main():
         c2.metric("MAE", f"{mae:.5f}")
         c3.metric("R²", f"{r2:.5f}")
 
-        # Loss Curve
-        st.subheader("Training Curve")
-        fig, ax = plt.subplots(figsize=(6, 4))
-        ax.plot(model.loss_history, label="MSE")
-        ax.set_xlabel("Epoch")
-        ax.set_ylabel("Loss")
-        ax.grid(True)
-        ax.legend()
-        st.pyplot(fig)
+    st.sidebar.header("Metrik & Visualisasi")
+    show_mse = st.sidebar.checkbox("Tampilkan MSE", value=True)
+    show_mae = st.sidebar.checkbox("Tampilkan MAE", value=True)
+    show_r2 = st.sidebar.checkbox("Tampilkan R²", value=True)
 
-        st.session_state.model = model
-        st.session_state.scaler_X = scaler_X
-        st.session_state.scaler_y = scaler_y
+    if "model" in st.session_state:
+        model = st.session_state.model
 
-    st.sidebar.header("Random Seed")
-    SEED = st.sidebar.number_input("Random Seed", value=42, step=1)
-    np.random.seed(SEED)
+        data_plot = {}
+        if show_mse:
+            data_plot["MSE"] = model.loss_history
+        if show_mae:
+            data_plot["MAE"] = model.mae_history
+        if show_r2:
+            data_plot["R²"] = model.r2_history
 
+        df_plot = pd.DataFrame(data_plot)
+        df_plot.index += 1
+        df_plot.index.name = "Epoch"
 
-    # Prediction
+        max_epoch_view = st.slider(
+            "Tampilkan sampai epoch:",
+            min_value=1,
+            max_value=len(df_plot),
+            value=len(df_plot),
+        )
+
+        st.subheader("Training Curve (Interaktif)")
+        st.line_chart(df_plot.iloc[:max_epoch_view])
+
     st.subheader("Prediksi Data Baru")
 
     if "model" in st.session_state:
@@ -115,10 +125,8 @@ def main():
         if st.button("Prediksi"):
             x_new = np.array(inputs).reshape(1, -1)
             x_new = st.session_state.scaler_X.transform(x_new)
-
             y_scaled = st.session_state.model.forward(x_new)
             y_pred = st.session_state.scaler_y.inverse_transform(y_scaled)
-
             st.success(f"Soil Moisture Prediksi: {y_pred[0][0]:.2f}")
     else:
         st.info("Latih model terlebih dahulu")
