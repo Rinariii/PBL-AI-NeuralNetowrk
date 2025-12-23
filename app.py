@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import streamlit as st
+import matplotlib.pyplot as plt
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
@@ -9,19 +10,13 @@ from NN_relu import SimpleNeuralNetwork
 
 st.set_page_config(page_title="Neural Network for Soil Mosture", layout="wide")
 
-
 @st.cache_data
 def load_data(path):
     return pd.read_csv(path)
 
-
 def main():
     st.title("Neural Network for Soil Mosture")
     st.caption("Regresi Soil Moisture menggunakan NN ReLU")
-
-    st.sidebar.header("Random Seed")
-    SEED = st.sidebar.number_input("Random Seed", value=42, step=1)
-    np.random.seed(SEED)
 
     df = load_data("synthetic_soil_moisture_5000.csv")
 
@@ -39,6 +34,10 @@ def main():
     epochs = st.sidebar.slider("Epochs", 500, 10000, 3000, step=500)
     lr = st.sidebar.number_input("Learning Rate", value=0.0001, format="%.6f")
     test_size = st.sidebar.slider("Test Size", 0.1, 0.4, 0.2)
+
+    st.sidebar.header("Random Seed")
+    SEED = st.sidebar.number_input("Random Seed", value=42, step=1)
+    np.random.seed(SEED)
 
     n = len(X)
     idx = np.random.permutation(n)
@@ -66,9 +65,7 @@ def main():
             )
             model.train(X_train, y_train, epochs=epochs, lr=lr)
 
-        st.session_state.model = model
-        st.session_state.scaler_X = scaler_X
-        st.session_state.scaler_y = scaler_y
+        st.success("Training selesai")
 
         y_pred_test = model.forward(X_test)
 
@@ -81,39 +78,53 @@ def main():
         c2.metric("MAE", f"{mae:.5f}")
         c3.metric("R²", f"{r2:.5f}")
 
-    st.sidebar.header("Metrik & Visualisasi")
-    show_mse = st.sidebar.checkbox("Tampilkan MSE", value=True)
-    show_mae = st.sidebar.checkbox("Tampilkan MAE", value=True)
-    show_r2 = st.sidebar.checkbox("Tampilkan R²", value=True)
+        st.session_state.model = model
+        st.session_state.scaler_X = scaler_X
+        st.session_state.scaler_y = scaler_y
 
     if "model" in st.session_state:
         model = st.session_state.model
 
-        data_plot = {}
-        if show_mse:
-            data_plot["MSE"] = model.loss_history
-        if show_mae:
-            data_plot["MAE"] = model.mae_history
-        if show_r2:
-            data_plot["R²"] = model.r2_history
+        st.sidebar.header("Metrik & Visualisasi")
+        show_mse = st.sidebar.checkbox("Tampilkan MSE", value=True)
+        show_mae = st.sidebar.checkbox("Tampilkan MAE", value=True)
+        show_r2 = st.sidebar.checkbox("Tampilkan R²", value=True)
 
-        df_plot = pd.DataFrame(data_plot)
-        df_plot.index += 1
-        df_plot.index.name = "Epoch"
+        epochs_range = np.arange(1, len(model.loss_history) + 1)
 
         max_epoch_view = st.slider(
             "Tampilkan sampai epoch:",
             min_value=1,
-            max_value=len(df_plot),
-            value=len(df_plot),
+            max_value=len(epochs_range),
+            value=len(epochs_range),
         )
 
-        st.subheader("Training Curve (Interaktif)")
-        st.line_chart(df_plot.iloc[:max_epoch_view])
+        if show_mse:
+            st.subheader("Kurva MSE")
+            df_mse = pd.DataFrame(
+                {"MSE": model.loss_history[:max_epoch_view]},
+                index=epochs_range[:max_epoch_view]
+            )
+            st.line_chart(df_mse)
 
-    st.subheader("Prediksi Data Baru")
+        if show_mae:
+            st.subheader("Kurva MAE")
+            df_mae = pd.DataFrame(
+                {"MAE": model.mae_history[:max_epoch_view]},
+                index=epochs_range[:max_epoch_view]
+            )
+            st.line_chart(df_mae)
 
-    if "model" in st.session_state:
+        if show_r2:
+            st.subheader("Kurva R²")
+            df_r2 = pd.DataFrame(
+                {"R²": model.r2_history[:max_epoch_view]},
+                index=epochs_range[:max_epoch_view]
+            )
+            st.line_chart(df_r2)
+
+        st.subheader("Prediksi Data Baru")
+
         inputs = []
         cols = st.columns(3)
 
@@ -125,12 +136,11 @@ def main():
         if st.button("Prediksi"):
             x_new = np.array(inputs).reshape(1, -1)
             x_new = st.session_state.scaler_X.transform(x_new)
-            y_scaled = st.session_state.model.forward(x_new)
+            y_scaled = model.forward(x_new)
             y_pred = st.session_state.scaler_y.inverse_transform(y_scaled)
             st.success(f"Soil Moisture Prediksi: {y_pred[0][0]:.2f}")
     else:
         st.info("Latih model terlebih dahulu")
-
 
 if __name__ == "__main__":
     main()
